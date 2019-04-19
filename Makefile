@@ -37,16 +37,16 @@ all: $(objFiles)
 clean:
 	rm -f $(SRC)/ugorji/util/*.o $(SRC)/ugorji/codec/*.o $(SRC)/ugorji/conn/*.o
 
-.test: $(DIST)/my_gtest
+.test: $(DIST)/__gtest
 
 .test.run: .test
-	$(DIST)/my_gtest
+	$(DIST)/__gtest
 
 %_test.o: %_test.cc 
 	$(CXX) $(TESTFLAGS) -c $^ -o $@
 
-$(DIST)/my_gtest: $(objFiles) $(testObjFiles)
-	$(CXX) $(TESTFLAGS) $^ -lgtest_main -lgtest -o $(DIST)/my_gtest
+$(DIST)/__gtest: $(objFiles) $(testObjFiles)
+	$(CXX) $(TESTFLAGS) $^ -lgtest_main -lgtest -o $(DIST)/__gtest
 
 .DEFAULT:
 	:
@@ -80,4 +80,4 @@ $(DIST)/my_gtest: $(objFiles) $(testObjFiles)
 # - When building/linking C++, order is very important
 #         -o XXX [*.o] [*.c] [-lXXX]
 
-# find $(SRC) $(DIST) \( -name '*.o' -o -name '*.a' -o -name '*.so' -o -name 'my_gtest' \) -delete # -print 
+# find $(SRC) $(DIST) \( -name '*.o' -o -name '*.a' -o -name '*.so' -o -name '__gtest' \) -delete # -print 
