@@ -35,7 +35,7 @@ check: .test.run
 all: $(objFiles)
 
 clean:
-	rm -f $(SRC)/ugorji/util/*.o $(SRC)/ugorji/codec/*.o $(SRC)/ugorji/conn/*.o
+	rm -f $(SRC)/ugorji/util/*.o $(SRC)/ugorji/codec/*.o $(SRC)/ugorji/conn/*.o $(DIST)/__gtest
 
 .test: $(DIST)/__gtest
 
