@@ -48,7 +48,7 @@ std::string Log::LevelToString(Level l, bool shortForm) {
     return s;
 }
 
-bool Log::Logv(Level l, std::string file, int line, const char* format, va_list ap) {
+bool Log::Logv(Level l, const std::string& file, const int line, const char* format, va_list ap) {
     if(l < minLevel_) return false;
     int slen = std::char_traits<char>::length(format);
     if(slen == 0) return false;
@@ -71,20 +71,38 @@ bool Log::Logv(Level l, std::string file, int line, const char* format, va_list 
     auto tid = ::syscall(SYS_gettid);
     
     std::lock_guard<std::mutex> lock(mu_);
+    
     //I XXXX MMdd HH:MM:SS.ssssss XXXXX file:line] msg ...
     // i = dprintf(fd_, "%s %3lu %s.%06ld %5ld %s:%d] ", 
     //             levelstr, seq, timebuf, numUsec, tid, fbase.c_str(), line);
     // Unfortunately, we cannot dynamically create a va_list, so we have to send multiple requests to write.
     // Since fd's are usually buffered, it helps.
-    i = dprintf(fd_, "%s %3lu %02d%02d %02d:%02d:%02d.%06ld %5ld %s:%d] ", 
-                levelstr, seq, tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, numUsec, tid, fbase.c_str(), line);
+
+    std::string fmt("%s %3lu %02d%02d %02d:%02d:%02d.%06ld %5ld %s:%d] ");
+    if(ansi_colors_ && isatty(fd_)) {
+        // http://pueblo.sourceforge.net/doc/manual/ansi_color_codes.html
+        char* color = "";
+        switch(l) {
+        case TRACE: color="32"; break;   // green
+        case DEBUG: color="32"; break;   // green
+        case INFO: color="34"; break;    // blue
+        case WARNING: color="33"; break; // yellow
+        case ERROR: color="31"; break;   // red
+        case SEVERE: color="31"; break;  // red
+        }
+        if(&color[0] != 0) fmt = std::string("\033[1;")+color+"m"+fmt+"\033[0m";
+    }
+    
+    i = dprintf(fd_, fmt.data(), levelstr, seq,
+                tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec,
+                numUsec, tid, fbase.data(), line);
     if(i < 0) return false;
     if((i = vdprintf(fd_, format, ap)) < 0) return false;
     if(format[slen-1] != '\n') write(fd_, "\n", 1);
     return true;
 }
 
-bool Log::Logf(Level l, std::string file, int line, const char* format, ...) {
+bool Log::Logf(Level l, const std::string& file, const int line, const char* format, ...) {
     if(l < minLevel_) return false;
     va_list ap;
     va_start(ap, format);

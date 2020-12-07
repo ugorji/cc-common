@@ -21,12 +21,15 @@ void BufReader::fill(bool continueOnInterrupt) {
     int n;
     while(true) {
         n = ::read(fd_, &buf_[w_], bufsize_-w_);
+        errno_ = errno;
         if(n < 0 && errno == EINTR && continueOnInterrupt) continue;
-        if(n == 0) eof_ = true;
-        else if(n < 0) errno_ = errno;
-        else w_ += n;
+        if(n == 0) {
+            eof_ = true;
+        } else if(n > 0) {
+            w_ += n;
+        }
         break;
-    } 
+    }
     return;
 }
 

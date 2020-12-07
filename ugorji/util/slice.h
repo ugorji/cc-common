@@ -23,9 +23,11 @@ typedef struct slice_bytes {
     size_t cap;
 } slice_bytes;
 
-extern void slice_bytes_append(slice_bytes* v, void* b, size_t len);
+extern void slice_bytes_append(slice_bytes* v, const void* b, size_t len);
 extern void slice_bytes_expand(slice_bytes* v, size_t len);
 extern void slice_bytes_append_1(slice_bytes* v, uint8_t bd);
+extern void slice_bytes_zero(slice_bytes* v);
+extern void slice_bytes_free(slice_bytes v);
 
 #ifdef __cplusplus
 }  // end extern "C" 

@@ -17,8 +17,9 @@ public:
     }
     int fd_ = 2; //default: stderr
     Level minLevel_ = INFO;
-    bool Logf(Level l, std::string file, int line, const char* format, ...);
-    bool Logv(Level l, std::string file, int line, const char* format, va_list ap);
+    bool ansi_colors_ = true;
+    bool Logf(Level l, const std::string& file, const int line, const char* format, ...);
+    bool Logv(Level l, const std::string& file, const int line, const char* format, va_list ap);
 private:
     std::atomic<uint64_t> Seq_;
     std::mutex mu_;

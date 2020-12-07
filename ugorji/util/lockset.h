@@ -32,7 +32,7 @@ private:
 public:
     ~LockSet();
     void locksFor(std::vector<std::string>& keys, LockSetLock* lsl);
-    Lock* lockFor(std::string key);
+    Lock* lockFor(const std::string& key);
 };
 
 // class LockSetLockGuard {

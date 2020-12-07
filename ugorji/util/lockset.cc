@@ -33,7 +33,7 @@ void LockSet::locksFor(std::vector<std::string>& keys, LockSetLock* lsl) {
     }
 }
 
-Lock* LockSet::lockFor(std::string key) {
+Lock* LockSet::lockFor(const std::string& key) {
     Lock* lk;
     std::unordered_map<std::string, Lock*>::iterator it = m_.find(key);
     if(it == m_.end()) {
