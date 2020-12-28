@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_util_logging_
-#define _incl_ugorji_util_logging_
+#pragma once
 
 #include <atomic>
 #include <mutex>
@@ -21,7 +20,7 @@ public:
     bool Logf(Level l, const std::string& file, const int line, const char* format, ...);
     bool Logv(Level l, const std::string& file, const int line, const char* format, va_list ap);
 private:
-    std::atomic<uint64_t> Seq_;
+    std::atomic<uint64_t> seq_;
     std::mutex mu_;
     //Log() : fd_(2), minLevel_(INFO) {};
     Log() {};
@@ -35,4 +34,3 @@ private:
 #define LOG(level, format, ...) ugorji::util::Log::getInstance().Logf(ugorji::util::Log::level, __FILE__, __LINE__, format, __VA_ARGS__)
 // #define LOGTRACE(format, ...) LOG(TRACE, format, ...)
 
-#endif //_incl_ugorji_util_logging_

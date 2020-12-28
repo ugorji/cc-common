@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_util_bigendian_
-#define _incl_ugorji_util_bigendian_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,4 +16,3 @@ extern uint64_t util_big_endian_read_uint64(uint8_t* b);
 #ifdef __cplusplus
 }  // end extern "C" 
 #endif
-#endif //_incl_ugorji_util_bigendian_

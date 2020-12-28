@@ -6,8 +6,7 @@ all: .common.all
 
 clean: .common.clean
 
-.test: $(DIST)/__gtest
+test: .common.test
 
-.test.run: .test
-	$(DIST)/__gtest
+check: .common.test.run
 

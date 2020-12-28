@@ -15,9 +15,9 @@ uint64_t codec_binc_prune_sign_ext(uint8_t* v, size_t length, bool pos) {
     uint64_t n = 0;
     if(length < 2) {
 	} if(pos && v[0] == 0) {
-		for(; v[n] == 0 && (n+1) < length && (v[n+1]&(1<<7) == 0); n++) {}
+		for(; v[n] == 0 && (n+1) < length && ((v[n+1]&(1<<7)) == 0); n++) {}
 	} else if(!pos && v[0] == 0xff) {
-        for(; v[n] == 0xff && (n+1) < length && (v[n+1]&(1<<7) != 0); n++) {}
+        for(; v[n] == 0xff && (n+1) < length && ((v[n+1]&(1<<7)) != 0); n++) {}
     }
     return n;
 }
@@ -134,6 +134,7 @@ void codec_binc_encode_len(uint8_t bd, uint64_t len, slice_bytes* b, char** err)
 void codec_binc_encode(codec_value* v, slice_bytes* b, char** err) {
     // fprintf(stderr, "Size of y: %d\n", sizeof(y));
     uint8_t bd = 0;
+    uint8_t i = 0;
     // uint8_t arr[8];
     switch(v->type) {
     case CODEC_VALUE_NIL:
@@ -159,8 +160,8 @@ void codec_binc_encode(codec_value* v, slice_bytes* b, char** err) {
             break;
         }
         // pruning
-        uint8_t i = 7;
-        for(; i >= 0 && ((&v->v.vFloat64)[i] == 0); i--) {}
+        i = 7;
+        for(; i < 8 && ((&v->v.vFloat64)[i] == 0); i--) {}
         i++;
         if(i <= 6) {
             bd = ((uint8_t)CODEC_BINC_DESC_FLOAT << 4) | (uint8_t)0x8 | (uint8_t)0x2;
@@ -189,16 +190,16 @@ void codec_binc_encode(codec_value* v, slice_bytes* b, char** err) {
 	case CODEC_VALUE_ARRAY:
         codec_binc_encode_len((uint8_t)CODEC_BINC_DESC_ARRAY << 4, v->v.vArray.len, b, err);
         if(*err != NULL) return;
-        for(int i = 0; i < v->v.vArray.len; i++) {
+        for(i = 0; i < v->v.vArray.len; i++) {
             codec_binc_encode(&v->v.vArray.v[i], b, err);
             if(*err != NULL) return;
         }
-        break;        
+        break;
 	case CODEC_VALUE_MAP:
         codec_binc_encode_len((uint8_t)CODEC_BINC_DESC_MAP << 4, v->v.vMap.len, b, err);
         if(*err != NULL) return;
         // fprintf(stderr, "map: len: %ld, b.pos: %ld\n", v->v.vMap.len, b->bytes.len);
-        for(int i = 0; i < v->v.vMap.len; i++) {
+        for(i = 0; i < v->v.vMap.len; i++) {
             codec_binc_encode(&v->v.vMap.v[i].k, b, err);
             if(*err != NULL) return;
             codec_binc_encode(&v->v.vMap.v[i].v, b, err);

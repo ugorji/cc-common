@@ -42,7 +42,7 @@ std::string errnoStr(const std::string& prefix, const std::string& suffix) {
     return prefix + "(" + std::to_string(errno) + ") " + errbuf2 + suffix;
 }
 
-bool errnoChk(int fd, std::string* err, bool halt = false,
+bool errnoChk(int fd, std::string& err, bool halt = false,
               const std::string& prefix = "", const std::string& suffix = "") {
     if(fd >= 0) return false;
     
@@ -51,7 +51,7 @@ bool errnoChk(int fd, std::string* err, bool halt = false,
         throw errnoStr(prefix, suffix);
     }
     
-    *err = errnoStr(prefix, suffix);
+    err = errnoStr(prefix, suffix);
     return true;
 }
 
@@ -61,21 +61,17 @@ std::string streamErrText(const std::string& cat, uint8_t expecting, uint8_t rec
     return std::string(errbuf);
 }
 
-void closeFd(int fd, std::string* err, const std::string& cat, bool useShutdown, bool logIt) {
-    //close(fd)
-    //useShutdown=true causes abort of our program
-    //seems these fd that are non-block must be closed w/ close (not shutdown).
-    useShutdown = false;
-    int i;
+void closeFd(int fd, std::string& err, const std::string& cat, bool useShutdown, bool logIt) {
+    int i(0);
     if(useShutdown) i = ::shutdown(fd, SHUT_RDWR);
     else i = ::close(fd);
     if(i < 0) {
-        *err = errnoStr("ERROR: shutdown " + cat + " fd " + std::to_string(fd) + ": ");
-        if(logIt) LOG(ERROR, "%s", (*err).c_str());
+        err = errnoStr("ERROR: shutdown " + cat + " fd " + std::to_string(fd) + ": ");
+        if(logIt) LOG(ERROR, "%s", (err).c_str());
     }
 }
 
-int listenport(int port, std::string* err) {
+int listenport(int port, std::string& err) {
     // adapted from: http://www.linuxhowtos.org/data/6/server.c
     auto sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(errnoChk(sockfd, err, "ERROR: opening socket: ")) return -1;
@@ -98,17 +94,19 @@ int listenport(int port, std::string* err) {
     return sockfd;
 }
 
+void runServerForManager(Manager& mgr, std::function<Handler&()> fn) {
+    Server svr(fn(), mgr);
+    svr.run();
+}
+
 void Manager::run(std::function<Handler&()> fn, bool useThisThread) {
     auto workers = maxWorkers_;
     if(workers<1) workers = 1;
     for(int i = 0; i < workers; i++) {
-        auto svr = new Server(fn(), *this);
-        servers_.push_back(svr);
         if(ALLOW_CURR_THREAD_FOR_MGR_RUN && useThisThread && i == workers-1) {
-            svr->run();
+            runServerForManager(*this, fn);
         } else {
-            auto thr = new std::thread(&Server::run, svr);
-            threads_.push_back(thr);
+            threads_.push_back(std::make_unique<std::thread>(&runServerForManager, std::ref(*this), fn));
         }
         numWorkers_++;
     }
@@ -118,7 +116,7 @@ void Manager::close() {
     // Do not block or raise signals, as it is likely called by a signal handler.
     if(closing()) return;
     state_ = S_STOPPING;
-    for(auto m : threads_) pthread_kill(m->native_handle(), interruptSig_);
+    for(auto& m : threads_) pthread_kill(m->native_handle(), interruptSig_);
     LOG(TRACE, "<stop> close called; %d worker threads notified by raising signal %d", threads_.size(), interruptSig_);
 }
 
@@ -130,41 +128,28 @@ void Manager::wait() {
         cond_.wait(lk);
         LOG(TRACE, "<wait> condition returned. state_: %d", state_.load());
     }
-    for(auto m : threads_) m->join();
+    for(auto& m : threads_) m->join();
     
     LOG(INFO, "<stop>: STOPPED", 0);
 }
 
 Manager::~Manager() {
-    for(auto m : threads_) delete m;
-    for(auto m : servers_) delete m;
     std::string err = "";
-    closeFd(listenfd_, &err);
+    closeFd(listenfd_, err);
     if(err.size() > 0) LOG(ERROR, "%s", err);
 }
 
 void Server::workFd(int fd) {
     std::string err = "";
     LOG(TRACE, "<work_fd> delegating to handler for work on fd: %d", fd);
-    hdlr_.handleFd(fd, &err);
+    hdlr_.handleFd(fd, err);
     if(err.size() != 0) {
         LOG(ERROR, "<work>: Closing connection (fd: %d) due to error: %s", fd, err.c_str());
-        removeFd(fd, &err);
+        removeFd(fd, err);
     } else {
         LOG(TRACE, "<work>: DONE handling fd %d", fd);
     }
 }
-
-// bool Server::isRunQEmpty() {
-//     return reqQ_.empty();
-// }
-
-// int Server::popFromRunQ() {
-//     if(reqQ_.empty()) return -1;
-//     int fd = reqQ_.front();
-//     reqQ_.pop_front();
-//     return fd;
-// }
 
 #define CHKRUNERR if(err.size() > 0) { mgr_.serverError(); LOG(ERROR, "%s", err.data()); err = ""; }
 
@@ -172,10 +157,10 @@ void Server::run() {
     std::string err = "";
     
     efd_ = epoll_create1(0);
-    errnoChk(efd_, &err, "ERROR: creating epoll: ");
+    errnoChk(efd_, err, "ERROR: creating epoll: ");
     CHKRUNERR;
     LOG(TRACE, "<run> listen fd: %d", mgr_.listenfd());
-    addFd(mgr_.listenfd(), &err);
+    addFd(mgr_.listenfd(), err);
     CHKRUNERR;
 
     epoll_event events[MAXEVENTS];
@@ -225,7 +210,7 @@ void Server::run() {
                 } else {
                     LOG(INFO, "<runloop> remote socket closed: fd: %d, epoll events: 0x%x", fd, int(evt));
                 }
-                if(fd != mgr_.listenfd()) removeFd(fd, &err);
+                if(fd != mgr_.listenfd()) removeFd(fd, err);
                 err = "";
                 continue;
             }
@@ -236,7 +221,7 @@ void Server::run() {
             // if((events[i].events & EPOLLIN) == 0) continue;
             err = "";
             if(mgr_.listenfd() == fd) {
-                if(pRead) acceptClients(false, &err); // ignore error (for now)
+                if(pRead) acceptClients(false, err); // ignore error (for now)
                 CHKRUNERR;
             } else if(pRead || pWrite) {
                 workFd(fd);
@@ -245,50 +230,50 @@ void Server::run() {
     }
     
     for(auto it = clientfds_.begin(); it != clientfds_.end(); it++) {
-        purgeFd(*it, &err);
+        purgeFd(*it, err);
     }    
     clientfds_.clear();
-    purgeFd(mgr_.listenfd(), &err);
-    closeFd(efd_, &err, "", false);
+    purgeFd(mgr_.listenfd(), err);
+    closeFd(efd_, err, "", false);
       
     mgr_.serverDone();
 }
 
-void Server::removeFd(int sockfd, std::string* err) {
+void Server::removeFd(int sockfd, std::string& err) {
     auto it = clientfds_.find(sockfd);
     if(it == clientfds_.end()) return;
     clientfds_.erase(it);
     purgeFd(sockfd, err);
 }
 
-void Server::purgeFd(int sockfd, std::string* err) {
+void Server::purgeFd(int sockfd, std::string& err) {
     std::string err1(""), err2(""), err3("");
     if(epoll_ctl(efd_, EPOLL_CTL_DEL, sockfd, nullptr) == -1) {
         err1 = errnoStr("error removing sockfd on epoll: ");
     }
     if(sockfd != mgr_.listenfd()) {
-        hdlr_.unregisterFd(sockfd, &err2);
-        closeFd(sockfd, &err3);
+        hdlr_.unregisterFd(sockfd, err2);
+        closeFd(sockfd, err3);
     }
     if(err2.size() > 0) err1.append(" && ").append(err2);
     if(err3.size() > 0) err1.append(" && ").append(err3);
-    *err = err1;
+    err = err1;
 }
 
-void Server::addFd(int sockfd, std::string* err) {
+void Server::addFd(int sockfd, std::string& err) {
     epoll_event evt{};
     evt.data.fd = sockfd;
     evt.events = EPOLLIN | EPOLLOUT | EPOLLET; // | EPOLLHUP // EPOLLHUP is reported by default
     if(sockfd == mgr_.listenfd()) evt.events |= EPOLLEXCLUSIVE;
     else evt.events |= EPOLLRDHUP;
     if(epoll_ctl(efd_, EPOLL_CTL_ADD, sockfd, &evt) == -1) {
-        *err = errnoStr("error adding sockfd on epoll: ");
+        err = errnoStr("error adding sockfd on epoll: ");
         return;
     }
     if(sockfd != mgr_.listenfd()) clientfds_.insert(sockfd);
 }
 
-void Server::acceptClients(bool retryOnError, std::string* err) {
+void Server::acceptClients(bool retryOnError, std::string& err) {
     //acceptThreadId_ = gettid();
     sockaddr_in cli_addr;
     socklen_t cli_len = sizeof(cli_addr);
@@ -302,7 +287,7 @@ void Server::acceptClients(bool retryOnError, std::string* err) {
             if(retryOnError) continue;
             std::string err2 = errnoStr("<accept>: Error accepting connection: ");
             LOG(ERROR, "%s", err2.c_str());
-            *err = err2;
+            err = err2;
         } else {
             LOG(TRACE, "<Accept>: Accepted New Connection with sockfd: %d", newsockfd);
             addFd(newsockfd, err);

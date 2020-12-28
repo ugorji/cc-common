@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_conn_conn_
-#define _incl_ugorji_conn_conn_
+#pragma once
 
 #include <mutex>
 #include <condition_variable>
@@ -40,10 +39,13 @@ const size_t CONN_BUF_INCR = 256;
 
 enum ConnState { CONN_READY, CONN_READING, CONN_PROCESSING, CONN_WRITING };
 
-int listenport(int port, std::string* err);
+int listenport(int port, std::string& err);
 
-void closeFd(int fd, std::string* err,
-             const std::string& cat = "", bool useShutdown = true, bool logIt = true);
+// Note:
+//useShutdown=true causes abort of our program
+//seems these fd that are non-block must be closed w/ close (not shutdown).
+void closeFd(int fd, std::string& err,
+             const std::string& cat = "", bool useShutdown = false, bool logIt = true);
 
 std::string errnoStr(const std::string& prefix = "", const std::string& suffix = "");
 
@@ -68,9 +70,12 @@ public:
     explicit Handler()
         : closed_(false), whatever_(false) {}
     virtual ~Handler() {};
-    virtual void handleFd(int fd, std::string* err) = 0;
-    virtual void unregisterFd(int fd, std::string* err) = 0;
+    virtual void handleFd(int fd, std::string& err) = 0;
+    virtual void unregisterFd(int fd, std::string& err) = 0;
 };
+
+// forward declaration, so Manager can see Server.
+class Server;
 
 // Manager/Supervisor
 //
@@ -97,23 +102,22 @@ private:
     int pollTimeoutMs_;    
     int interruptSig_;
 
-    std::vector<std::thread*> threads_;
-    std::vector<void*> servers_; // these MUST all be Servers, but we use void* to prevent cyclic reference
+    std::vector<std::unique_ptr<std::thread>> threads_;
 public:
     Manager(int portno = 9999, int maxWorkers = -1,
             int pollTimeoutMs = -1, int interruptSig = SIGUSR1) :
+        numWorkers_(0),
+        state_(S_INIT),
+        numServerErrors_(0),
         portno_(portno),
+        listenfd_(-1),
         maxWorkers_(maxWorkers),
         pollTimeoutMs_(pollTimeoutMs),
-        interruptSig_(interruptSig),
-        numWorkers_(0),
-        numServerErrors_(0),
-        listenfd_(-1),
-        state_(S_INIT) {
+        interruptSig_(interruptSig) {
         if(maxWorkers_ < 0) maxWorkers_ = ::get_nprocs();
     }
     ~Manager();
-    void open(std::string* err) { listenfd_ = listenport(portno_, err); }
+    void open(std::string& err) { listenfd_ = listenport(portno_, err); }
     void run(std::function<Handler&()> fn, bool useThisThread);
     void wait();
     void close(); // async
@@ -165,17 +169,18 @@ private:
     Handler& hdlr_;
     int efd_;
     
-    void acceptClients(bool retryOnError, std::string* err);
-    void addFd(int sockfd, std::string* err);
-    void removeFd(int sockfd, std::string* err);
-    void purgeFd(int sockfd, std::string* err);
+    void acceptClients(bool retryOnError, std::string& err);
+    void addFd(int sockfd, std::string& err);
+    void removeFd(int sockfd, std::string& err);
+    void purgeFd(int sockfd, std::string& err);
     void workFd(int fd);
     // bool isRunQEmpty();
     // int popFromRunQ();
 public:
     Server(Handler& hdlr, Manager& mgr) : 
         mgr_(mgr),
-        hdlr_(hdlr) {
+        hdlr_(hdlr),
+        efd_(-1) {
     }
     ~Server() {};
     void run();
@@ -184,4 +189,3 @@ public:
 }
 }
 
-#endif //_incl_ugorji_conn_conn_

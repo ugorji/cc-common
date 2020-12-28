@@ -18,9 +18,8 @@ void BufReader::fill(bool continueOnInterrupt) {
     //don't make errno_ sticky. Let new request to fill do it again.
     if(fd_ < 0) return;
     if(eof_) return;
-    int n;
     while(true) {
-        n = ::read(fd_, &buf_[w_], bufsize_-w_);
+        int n = ::read(fd_, &buf_[w_], bufsize_-w_);
         errno_ = errno;
         if(n < 0 && errno == EINTR && continueOnInterrupt) continue;
         if(n == 0) {

@@ -59,12 +59,12 @@ bool Log::Logv(Level l, const std::string& file, const int line, const char* for
     std::chrono::microseconds usec = std::chrono::duration_cast<std::chrono::microseconds>(stime.time_since_epoch());
     auto numUsec = usec.count() % 1000000;
     auto tm = gmtime(&epoch_time);
-    int i;
+    // size_t i;
     // char timebuf[16] = {0};
     // if((i = strftime(timebuf, 16, "%m%d %H:%M:%S", tm)) < 0) return false;
 
-    auto seq = Seq_++;
-    i = file.find_last_of("/\\");
+    auto seq = seq_++;
+    size_t i = file.find_last_of("/\\");
     std::string fbase = file;
     if(i != std::string::npos) fbase = file.substr(i + 1);
     auto levelstr = LevelToString(l, true).c_str();
@@ -81,7 +81,7 @@ bool Log::Logv(Level l, const std::string& file, const int line, const char* for
     std::string fmt("%s %3lu %02d%02d %02d:%02d:%02d.%06ld %5ld %s:%d] ");
     if(ansi_colors_ && isatty(fd_)) {
         // http://pueblo.sourceforge.net/doc/manual/ansi_color_codes.html
-        char* color = "";
+        std::string color = "";
         switch(l) {
         case TRACE: color="32"; break;   // green
         case DEBUG: color="32"; break;   // green
@@ -89,15 +89,17 @@ bool Log::Logv(Level l, const std::string& file, const int line, const char* for
         case WARNING: color="33"; break; // yellow
         case ERROR: color="31"; break;   // red
         case SEVERE: color="31"; break;  // red
+        case ALL: case OFF: break;
         }
         if(&color[0] != 0) fmt = std::string("\033[1;")+color+"m"+fmt+"\033[0m";
     }
     
-    i = dprintf(fd_, fmt.data(), levelstr, seq,
+    int ii = dprintf(fd_, fmt.data(), levelstr, seq,
                 tm->tm_mon+1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec,
                 numUsec, tid, fbase.data(), line);
-    if(i < 0) return false;
-    if((i = vdprintf(fd_, format, ap)) < 0) return false;
+    if(ii < 0) return false;
+    ii = vdprintf(fd_, format, ap);
+    if(ii < 0) return false;
     if(format[slen-1] != '\n') write(fd_, "\n", 1);
     return true;
 }

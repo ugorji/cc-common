@@ -58,7 +58,7 @@ size_t codec_simple_decode_len(codec_decode_state* b, uint8_t bd, char** err) {
     case 4: 
         if(sizeof(size_t) < 8) {
             *err = (char*)malloc(128);
-            snprintf(*err, 128, "codec_simple_decode_len: length must fit within %ld bytes", sizeof(size_t));
+            snprintf(*err, 128, "codec_simple_decode_len: length must fit within %lu bytes", sizeof(size_t));
             break;
         } 
         len = (size_t)codec_simple_readn(b, 8, err); break;
@@ -73,7 +73,7 @@ size_t codec_simple_decode_len(codec_decode_state* b, uint8_t bd, char** err) {
 void codec_simple_encode(codec_value* v, slice_bytes* b, char** err) {
     // walk the value and encode it.
     uint8_t bd = 0;
-    uint8_t arr[8];
+    // uint8_t arr[8];
     switch(v->type) {
     case CODEC_VALUE_NIL:
         slice_bytes_append_1(b, CODEC_SIMPLE_DESC_NIL);

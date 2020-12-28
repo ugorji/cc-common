@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_util_slice_
-#define _incl_ugorji_util_slice_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,4 +31,3 @@ extern void slice_bytes_free(slice_bytes v);
 #ifdef __cplusplus
 }  // end extern "C" 
 #endif
-#endif //_incl_ugorji_util_slice_

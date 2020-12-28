@@ -56,7 +56,7 @@ void codec_value_print_r(codec_value* v, slice_bytes* b) {
         break;
 	case CODEC_VALUE_POS_INT:
         slice_bytes_expand(b, 16);
-        b->bytes.len += snprintf(&b->bytes.v[b->bytes.len], 16, "%ld", v->v.vUint64);
+        b->bytes.len += snprintf(&b->bytes.v[b->bytes.len], 16, "%lu", v->v.vUint64);
         break;
 	case CODEC_VALUE_NEG_INT:
         slice_bytes_expand(b, 16);
@@ -81,7 +81,7 @@ void codec_value_print_r(codec_value* v, slice_bytes* b) {
         b->bytes.len += snprintf(&b->bytes.v[b->bytes.len], 3, "0x");
         for(x = 0; x < v->v.vString.bytes.len; x++) {
             // fprintf(stderr, "bytes: %d: 0x%hhx\n", x, v->v.vString.bytes.v[x]);
-            b->bytes.len += snprintf(&b->bytes.v[b->bytes.len], 3, "%hhx", v->v.vString.bytes.v[x]);
+            b->bytes.len += snprintf(&b->bytes.v[b->bytes.len], 3, "%hhd", v->v.vString.bytes.v[x]);
         }
         break;
     case CODEC_VALUE_MAP:
@@ -139,7 +139,7 @@ void codec_value_print(codec_value* v, slice_bytes* b) {
 bool codec_decode_state_chk(codec_decode_state* b, size_t len, char** err) {
     if((len + b->pos) > b->b.bytes.len) {
         char* errmsg = (char*)malloc(128);
-        snprintf(errmsg, 128, "codec_decode_state: past bytes bound: pos: %ld >= len: %ld", 
+        snprintf(errmsg, 128, "codec_decode_state: past bytes bound: pos: %lu >= len: %lu", 
                  b->pos, b->b.bytes.len);
         *err = errmsg;
         return true;
@@ -150,7 +150,7 @@ bool codec_decode_state_chk(codec_decode_state* b, size_t len, char** err) {
 bool codec_decode_state_chk2(codec_decode_state* b, char** err) {
     if(b->pos >= b->b.bytes.len) {
         char* errmsg = (char*)malloc(128);
-        snprintf(errmsg, 128, "codec_decode_state: pos: %ld >= len: %ld", b->pos, b->b.bytes.len);
+        snprintf(errmsg, 128, "codec_decode_state: pos: %lu >= len: %lu", b->pos, b->b.bytes.len);
         *err = errmsg;
         return true;
     }

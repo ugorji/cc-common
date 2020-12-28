@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_codec_codec_
-#define _incl_ugorji_codec_codec_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,18 +11,45 @@ extern "C" {
 #include "../util/bigendian.h"
 #include "../util/slice.h"
 
-#define    CODEC_MaxInt8   1<<7 - 1
-#define    CODEC_MinInt8   -1 << 7
-#define    CODEC_MaxInt16  1<<15 - 1
-#define    CODEC_MinInt16  -1 << 15
-#define    CODEC_MaxInt32  1<<31 - 1
-#define    CODEC_MinInt32  -1 << 31
-#define    CODEC_MaxInt64  1<<63 - 1
-#define    CODEC_MinInt64  -1 << 63
-#define    CODEC_MaxUint8  1<<8 - 1
-#define    CODEC_MaxUint16 1<<16 - 1
-#define    CODEC_MaxUint32 1<<32 - 1
-#define    CODEC_MaxUint64 1<<64 - 1
+#define    CODEC_MaxInt8   INT8_MAX
+#define    CODEC_MinInt8   INT8_MIN
+#define    CODEC_MaxInt16  INT16_MAX
+#define    CODEC_MinInt16  INT16_MIN
+#define    CODEC_MaxInt32  INT32_MAX
+#define    CODEC_MinInt32  INT32_MIN
+#define    CODEC_MaxInt64  INT64_MAX
+#define    CODEC_MinInt64  INT64_MIN
+#define    CODEC_MaxUint8  UINT8_MAX
+#define    CODEC_MaxUint16 UINT16_MAX
+#define    CODEC_MaxUint32 UINT32_MAX
+#define    CODEC_MaxUint64 UINT64_MAX
+
+// #define    CODEC_MaxInt8   1<<7 - 1
+// #define    CODEC_MinInt8   -1 << 7
+// #define    CODEC_MaxInt16  1<<15 - 1
+// #define    CODEC_MinInt16  -1 << 15
+// #define    CODEC_MaxInt32  1<<31 - 1
+// #define    CODEC_MinInt32  -1 << 31
+// #define    CODEC_MaxInt64  1<<63 - 1
+// #define    CODEC_MinInt64  -1 << 63
+// #define    CODEC_MaxUint8  1<<8 - 1
+// #define    CODEC_MaxUint16 1<<16 - 1
+// #define    CODEC_MaxUint32 1<<32 - 1
+// #define    CODEC_MaxUint64 1<<64 - 1
+
+// #define    CODEC_MaxInt8   int8_t(1)  <<7 - 1
+// #define    CODEC_MinInt8   int8_t(-1) <<7
+// #define    CODEC_MaxInt16  int16_t(1)  <<15 - 1
+// #define    CODEC_MinInt16  int16_t(-1) <<15
+// #define    CODEC_MaxInt32  int32_t(1)  <<31 - 1
+// #define    CODEC_MinInt32  int32_t(-1) <<31
+// #define    CODEC_MaxInt64  int64_t(1)  <<63 - 1
+// #define    CODEC_MinInt64  int64_t(-1) <<63
+// #define    CODEC_MaxUint8  uint8_t(1)  <<8 - 1
+// #define    CODEC_MaxUint16 uint16_t(1)  <<16 - 1
+// #define    CODEC_MaxUint32 uint32_t(1)  <<32 - 1
+// #define    CODEC_MaxUint64 uint64_t(1)  <<64 - 1
+
 #define    CODEC_uvnan     0x7FF8000000000001
 #define    CODEC_uvinf     0x7FF0000000000000
 #define    CODEC_uvneginf  0xFFF0000000000000
@@ -109,4 +135,3 @@ extern bool codec_decode_state_chk2(codec_decode_state* b, char** err);
 #ifdef __cplusplus
 }  // end extern "C" 
 #endif
-#endif //_incl_ugorji_codec_codec_

@@ -1,5 +1,4 @@
-#ifndef _incl_ugorji_codec_simplecodec_
-#define _incl_ugorji_codec_simplecodec_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,5 +30,4 @@ extern size_t codec_simple_decode(slice_bytes b, codec_value* v, char** err);
 #ifdef __cplusplus
 }  // end extern "C" 
 #endif
-#endif //_incl_ugorji_codec_simplecodec_
 
